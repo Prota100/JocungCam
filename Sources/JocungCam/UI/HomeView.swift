@@ -130,7 +130,7 @@ struct HomeView: View {
 
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.down.doc").font(.system(size: 9))
-                    Text("GIF · MP4 · WebP · 이미지 드롭").font(HCTheme.micro)
+                    Text("QuickTime(MOV) · MP4 · GIF · 이미지 드롭").font(HCTheme.micro)
                 }.foregroundColor(HCTheme.textTertiary)
             }
         }
