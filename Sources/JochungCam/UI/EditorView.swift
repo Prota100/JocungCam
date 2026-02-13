@@ -461,15 +461,18 @@ struct EditorView: View {
             skipQuantizeWhenQ100: appState.skipQuantizeWhenQ100
         )
         let mp4q = appState.mp4Quality
+        let useGifski = appState.useGifski
+        let webpQuality = appState.webpQuality
+        let webpLossless = appState.webpLossless
+        let loopCount = appState.loopCount
         Task.detached {
             do {
                 switch format {
                 case .gif:
-                    let useGifski = appState.useGifski
                     if useGifski && GifskiEncoder.isAvailable {
                         let gopts = GifskiEncoder.Options(fps: Int(1.0 / (frames.first?.duration ?? 0.066)),
                             quality: opts.quality, maxWidth: opts.maxWidth, loopCount: opts.loopCount)
-                        try GifskiEncoder.encode(frames: frames, to: url, options: gopts) { p in
+                        try await GifskiEncoder.encode(frames: frames, to: url, options: gopts) { p in
                             Task { @MainActor in appState.saveProgress = p }
                         }
                     } else {
@@ -483,9 +486,9 @@ struct EditorView: View {
                     }
                 case .webp:
                     if WebPEncoder.isAvailable {
-                        let wopts = WebPEncoder.Options(quality: appState.webpQuality, lossless: appState.webpLossless,
-                            fps: Int(1.0 / (frames.first?.duration ?? 0.066)), loopCount: appState.loopCount, maxWidth: opts.maxWidth)
-                        try WebPEncoder.encode(frames: frames, to: url, options: wopts) { p in
+                        let wopts = WebPEncoder.Options(quality: webpQuality, lossless: webpLossless,
+                            fps: Int(1.0 / (frames.first?.duration ?? 0.066)), loopCount: loopCount, maxWidth: opts.maxWidth)
+                        try await WebPEncoder.encode(frames: frames, to: url, options: wopts) { p in
                             Task { @MainActor in appState.saveProgress = p }
                         }
                     } else {
@@ -494,6 +497,7 @@ struct EditorView: View {
                         }
                     }
                 case .apng:
+                    // APNG는 GIFEncoder와 동일한 ImageIO 기반이므로 async 아님
                     try GIFEncoder.encode(frames: frames, to: url, options: opts) { p in
                         Task { @MainActor in appState.saveProgress = p }
                     }
