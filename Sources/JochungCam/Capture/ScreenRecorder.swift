@@ -11,8 +11,11 @@ final class ScreenRecorder: ObservableObject {
     let cursorTracker = CursorTracker()
 
     func getRegionForMode(_ mode: AppState.CaptureMode) -> CGRect? {
-        guard let screen = NSScreen.main else { return nil }
+        // 마우스 커서가 있는 스크린 사용 (더블 모니터 지원)
+        let mouseLocation = NSEvent.mouseLocation
+        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) }) ?? NSScreen.main else { return nil }
         let f = screen.frame
+        // 좌표를 스크린 기준으로 정규화 (0,0 시작)
         switch mode {
         case .region: return nil // user selects
         case .fullscreen: return CGRect(x: 0, y: 0, width: f.width, height: f.height)
@@ -23,7 +26,16 @@ final class ScreenRecorder: ObservableObject {
 
     func startRecording(region: CGRect, appState: AppState) async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-        guard let display = content.displays.first else { throw RecordError.noDisplay }
+        
+        // 마우스 위치 기반으로 적절한 디스플레이 찾기
+        let mouseLocation = NSEvent.mouseLocation
+        let targetScreen = NSScreen.screens.first { $0.frame.contains(mouseLocation) } ?? NSScreen.main
+        
+        // CGDirectDisplayID로 매칭되는 SCDisplay 찾기
+        guard let screen = targetScreen,
+              let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+              let display = content.displays.first(where: { $0.displayID == displayID }) ?? content.displays.first 
+        else { throw RecordError.noDisplay }
 
         let myWindows = content.windows.filter { $0.owningApplication?.bundleIdentifier == Bundle.main.bundleIdentifier }
         let filter = SCContentFilter(display: display, excludingWindows: myWindows)

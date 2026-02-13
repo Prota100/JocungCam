@@ -300,9 +300,12 @@ struct ExportSheet: View {
     }
 
     func presetDetail(_ p: GIFSizePreset) -> String {
-        let w = p.maxWidth > 0 ? "\(p.maxWidth)px" : "원본"
-        let s = p.maxFileSizeKB > 0 ? "\(p.maxFileSizeKB/1000)MB" : "무제한"
-        return "\(w) · \(s)"
+        switch p {
+        case .light: return "400px · 1MB"
+        case .normal: return "640px · 3MB" 
+        case .discord: return "480px · 10MB"
+        case .high: return "원본 · 무제한"
+        }
     }
 
     func isActivePreset(_ p: GIFSizePreset) -> Bool {

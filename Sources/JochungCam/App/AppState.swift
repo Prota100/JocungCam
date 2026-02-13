@@ -39,46 +39,43 @@ enum GIFQuality: String, CaseIterable, Identifiable {
 }
 
 enum GIFSizePreset: String, CaseIterable, Identifiable {
-    case discord = "디코"        // Discord: 10MB, 256색
-    case telegram = "텔레"       // Telegram: 5MB
-    case twitter = "트위터"      // Twitter: 15MB, 480px
-    case small = "소"           // 작은 파일
-    case hq = "고화질"          // 큰 파일 고화질
+    case light = "가벼움"       // 1MB, 작은 해상도
+    case normal = "보통"        // 3MB, 적당한 해상도
+    case discord = "디스코드"   // 10MB 제한
+    case high = "고화질"        // 큰 파일, 원본 해상도
 
     var id: String { rawValue }
     var label: String { rawValue }
 
     var maxWidth: Int {
         switch self {
-        case .discord: return 480
-        case .telegram: return 320
-        case .twitter: return 480
-        case .small: return 320
-        case .hq: return 0  // keep original
+        case .light: return 400      // 가벼움: 400px
+        case .normal: return 640     // 보통: 640px 
+        case .discord: return 480    // 디스코드: 480px (10MB 제한)
+        case .high: return 0         // 고화질: 원본 해상도
         }
     }
     var quality: GIFQuality {
         switch self {
-        case .discord: return .high
-        case .telegram: return .medium
-        case .twitter: return .high
-        case .small: return .low
-        case .hq: return .high
+        case .light: return .low     // 가벼움: 64색
+        case .normal: return .medium // 보통: 128색
+        case .discord: return .high  // 디스코드: 256색
+        case .high: return .high     // 고화질: 256색
         }
     }
     var maxFileSizeKB: Int {
         switch self {
-        case .discord: return 10000
-        case .telegram: return 5000
-        case .twitter: return 15000
-        case .small: return 2000
-        case .hq: return 0
+        case .light: return 1000     // 가벼움: 1MB
+        case .normal: return 3000    // 보통: 3MB
+        case .discord: return 10000  // 디스코드: 10MB
+        case .high: return 0         // 고화질: 무제한
         }
     }
     var liqSpeed: Int {
         switch self {
-        case .hq: return 1
-        default: return 4
+        case .high: return 1         // 고화질: 최고 품질
+        case .light: return 8        // 가벼움: 빠른 처리
+        default: return 4            // 보통: 균형
         }
     }
 }
@@ -105,8 +102,8 @@ final class AppState: ObservableObject {
     @Published var mode: AppMode = .home
 
     // Recording settings
-    @Published var fps: Int = 20
-    @Published var customFps: String = "20"
+    @Published var fps: Int = 15             // 기본: 15fps (가벼움)
+    @Published var customFps: String = "15"
     @Published var cursorCapture: Bool = true
     @Published var countdown: Int = 0  // 0=off, 3, 5
     @Published var skipSameFrames: Bool = true
@@ -129,7 +126,7 @@ final class AppState: ObservableObject {
 
     // Export settings
     @Published var outputFormat: OutputFormat = .gif
-    @Published var gifQuality: GIFQuality = .high
+    @Published var gifQuality: GIFQuality = .medium  // 기본: 중간 품질 (가벼움)
     @Published var quantMethod: QuantMethod = .liq
     @Published var useDither: Bool = true
     @Published var ditherLevel: Float = 1.0
@@ -138,8 +135,8 @@ final class AppState: ObservableObject {
     @Published var removeSimilarPixels: Bool = false   // 유사 픽셀 제거 (꿀캠 IDC_CHK_GIF_REMOVE_SIMILAR_PIXELS)
     @Published var liqSpeed: Int = 4       // libimagequant speed 1-10 (1=최고품질, 10=최고속도) (꿀캠 IDC_EDIT_GIF_QUANT_SPEED)
     @Published var liqQuality: Int = 90    // libimagequant quality 0-100 (꿀캠 IDC_EDIT_GIF_QUANT_QUALITY)
-    @Published var maxWidth: Int = 0
-    @Published var maxFileSizeKB: Int = 0  // 0=unlimited
+    @Published var maxWidth: Int = 640       // 기본: 640px (가벼움) 
+    @Published var maxFileSizeKB: Int = 3000  // 기본: 3MB 제한
     @Published var loopCount: Int = 0      // 0=infinite
     @Published var webpQuality: Int = 85
     @Published var webpLossless: Bool = false
