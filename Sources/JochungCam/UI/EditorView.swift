@@ -115,29 +115,83 @@ struct EditorView: View {
     var timeline: some View {
         VStack(spacing: 0) {
             if trimMode {
-                HStack(spacing: 8) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "scissors").font(.system(size: 9))
-                        Text("트림").font(.system(size: 10, weight: .bold))
-                    }.foregroundColor(HCTheme.accent)
+                VStack(spacing: 8) {
+                    // 트림 헤더
+                    HStack(spacing: 8) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "scissors").font(.system(size: 9))
+                            Text("트림").font(.system(size: 10, weight: .bold))
+                        }.foregroundColor(HCTheme.accent)
 
-                    Text("\(trimStart + 1) ~ \(trimEnd + 1)").font(HCTheme.microMono).foregroundColor(HCTheme.textSecondary)
-                    HCTag("\(trimEnd - trimStart + 1)프레임")
+                        Text("\(trimStart + 1) ~ \(trimEnd + 1)").font(HCTheme.microMono).foregroundColor(HCTheme.textSecondary)
+                        HCTag("\(trimEnd - trimStart + 1)프레임")
 
-                    Spacer()
+                        Spacer()
 
-                    Button("적용") {
-                        pushUndo()
-                        appState.frames = Array(appState.frames[trimStart...trimEnd])
-                        appState.selectedFrameIndex = 0; trimMode = false
+                        Button("적용") {
+                            pushUndo()
+                            appState.frames = Array(appState.frames[trimStart...trimEnd])
+                            appState.selectedFrameIndex = 0; trimMode = false
+                        }
+                        .font(.system(size: 10, weight: .semibold))
+                        .buttonStyle(.borderedProminent).tint(HCTheme.accent).controlSize(.mini)
+
+                        Button("취소") { trimMode = false }
+                            .font(.system(size: 10)).controlSize(.mini)
                     }
-                    .font(.system(size: 10, weight: .semibold))
-                    .buttonStyle(.borderedProminent).tint(HCTheme.accent).controlSize(.mini)
-
-                    Button("취소") { trimMode = false }
-                        .font(.system(size: 10)).controlSize(.mini)
+                    
+                    // QuickTime 스타일 트림 슬라이더
+                    GeometryReader { geo in
+                        let totalWidth = geo.size.width - 32
+                        let frameCount = appState.frames.count
+                        let startPos = totalWidth * CGFloat(trimStart) / CGFloat(max(1, frameCount - 1))
+                        let endPos = totalWidth * CGFloat(trimEnd) / CGFloat(max(1, frameCount - 1))
+                        
+                        ZStack(alignment: .leading) {
+                            // 배경 트랙
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(HCTheme.surface)
+                                .frame(height: 6)
+                                .offset(x: 16)
+                            
+                            // 선택된 범위
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(HCTheme.accent)
+                                .frame(width: endPos - startPos + 16, height: 6)
+                                .offset(x: 16 + startPos)
+                            
+                            // 시작 핸들
+                            Circle()
+                                .fill(HCTheme.accent)
+                                .frame(width: 16, height: 16)
+                                .offset(x: 8 + startPos)
+                                .gesture(
+                                    DragGesture()
+                                        .onChanged { value in
+                                            let mouseX = max(0, min(totalWidth, value.location.x - 16))
+                                            let newFrame = Int(mouseX / totalWidth * CGFloat(frameCount - 1))
+                                            trimStart = max(0, min(trimEnd - 1, newFrame))
+                                        }
+                                )
+                            
+                            // 끝 핸들
+                            Circle()
+                                .fill(HCTheme.accent)
+                                .frame(width: 16, height: 16)
+                                .offset(x: 8 + endPos)
+                                .gesture(
+                                    DragGesture()
+                                        .onChanged { value in
+                                            let mouseX = max(0, min(totalWidth, value.location.x - 16))
+                                            let newFrame = Int(mouseX / totalWidth * CGFloat(frameCount - 1))
+                                            trimEnd = max(trimStart + 1, min(frameCount - 1, newFrame))
+                                        }
+                                )
+                        }
+                    }
+                    .frame(height: 16)
                 }
-                .padding(.horizontal, HCTheme.pad).padding(.vertical, 4)
+                .padding(.horizontal, HCTheme.pad).padding(.vertical, 6)
                 .background(HCTheme.accentDim)
             }
 

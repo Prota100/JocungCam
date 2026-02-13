@@ -132,21 +132,42 @@ enum FrameOps {
         let asset = AVURLAsset(url: url)
         guard let duration = try? await asset.load(.duration) else { return nil }
         let totalSec = CMTimeGetSeconds(duration)
-        let interval = 1.0 / fps
+        
+        // 30초 넘으면 fps 줄여서 메모리 보호
+        let maxFrames = 900 // 30초 * 30fps 정도
+        let interval = max(1.0 / fps, totalSec / Double(maxFrames))
+        
         let generator = AVAssetImageGenerator(asset: asset)
-        generator.requestedTimeToleranceBefore = CMTime(seconds: interval/2, preferredTimescale: 600)
-        generator.requestedTimeToleranceAfter = CMTime(seconds: interval/2, preferredTimescale: 600)
+        generator.requestedTimeToleranceBefore = CMTime.zero
+        generator.requestedTimeToleranceAfter = CMTime.zero
         generator.appliesPreferredTrackTransform = true
-
+        
+        // 메모리 최적화
+        generator.maximumSize = CGSize(width: 1920, height: 1080) // 풀HD 제한
+        
         var frames: [GIFFrame] = []
+        var times: [CMTime] = []
+        
+        // 시간 배열 미리 생성
         var t: Double = 0
-        while t < totalSec {
-            let cmTime = CMTime(seconds: t, preferredTimescale: 600)
-            if let (img, _) = try? await generator.image(at: cmTime) {
-                frames.append(GIFFrame(image: img, duration: interval))
-            }
+        while t < totalSec && times.count < maxFrames {
+            times.append(CMTime(seconds: t, preferredTimescale: 600))
             t += interval
         }
+        
+        // 배치로 처리 (메모리 관리)
+        for cmTime in times {
+            if let (img, _) = try? await generator.image(at: cmTime) {
+                autoreleasepool {
+                    frames.append(GIFFrame(image: img, duration: interval))
+                }
+            }
+            // 100프레임마다 잠시 멈춰서 메모리 정리
+            if frames.count % 100 == 0 {
+                try? await Task.sleep(nanoseconds: 10_000_000) // 0.01초
+            }
+        }
+        
         return frames.isEmpty ? nil : frames
     }
 }
